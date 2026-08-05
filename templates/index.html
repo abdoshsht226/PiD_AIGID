@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PiD · AIGID Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+:root{
+  --bg:        #0a0c0b;
+  --surface:   #111413;
+  --surface2:  #181c1a;
+  --border:    #1f2421;
+  --border2:   #2a302d;
+  --text:      #e8ede9;
+  --muted:     #6b7a6e;
+  --accent:    #3dcc8e;
+  --accent-dim:#0f2e1f;
+  --accent-txt:#3dcc8e;
+  --danger:    #e05c5c;
+  --danger-dim:#2a1212;
+  --danger-txt:#e05c5c;
+  --warn:      #e0953d;
+  --warn-dim:  #2a1d0a;
+  --mono:      'DM Mono', monospace;
+  --display:   'Syne', sans-serif;
+  --body:      'Inter', sans-serif;
+  --r-sm:      6px;
+  --r-md:      10px;
+  --r-lg:      16px;
+}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  min-height:100vh;
+  line-height:1.6;
+}
+.layout{
+  display:grid;
+  grid-template-columns:380px 1fr;
+  min-height:100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar{
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  padding:28px 24px;
+  gap:24px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{
+  width:38px;height:38px;border-radius:var(--r-md);
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.logo-mark svg{width:20px;height:20px;fill:#0a0c0b}
+.logo-text{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:-.5px}
+.logo-text span{color:var(--accent)}
+.divider{height:1px;background:var(--border)}
+
+/* ── Drop zone ── */
+.drop-zone{
+  border:1.5px dashed var(--border2);
+  border-radius:var(--r-lg);
+  padding:36px 24px;
+  text-align:center;
+  cursor:pointer;
+  transition:border-color .2s,background .2s;
+  background:var(--surface2);
+  position:relative;
+  overflow:hidden;
+}
+.drop-zone:hover,.drop-zone.dragover{
+  border-color:var(--accent);
+  background:var(--accent-dim);
+}
+.drop-zone.has-image{
+  border-style:solid;
+  border-color:var(--border2);
+  padding:0;
+  cursor:default;
+}
+.drop-zone.has-image img{
+  width:100%;
+  border-radius:calc(var(--r-lg) - 1.5px);
+  display:block;
+  max-height:220px;
+  object-fit:contain;
+  background:#0d0f0e;
+}
+.drop-icon{margin-bottom:12px;color:var(--muted)}
+.drop-icon svg{width:36px;height:36px;stroke:currentColor;stroke-width:1.5;fill:none}
+.drop-label{font-size:13px;color:var(--muted);line-height:1.6}
+.drop-label strong{color:var(--text);font-weight:500}
+.image-toolbar{position:absolute;top:8px;right:8px;display:none;gap:6px}
+.has-image .image-toolbar{display:flex}
+.tb-btn{
+  background:rgba(10,12,11,.75);
+  backdrop-filter:blur(6px);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  padding:4px 10px;
+  font-size:11px;
+  color:var(--muted);
+  cursor:pointer;
+  display:flex;align-items:center;gap:4px;
+  transition:color .15s,border-color .15s;
+}
+.tb-btn:hover{color:var(--text);border-color:var(--border2)}
+.tb-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none}
+
+/* ── Chips ── */
+.chip-row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  font-size:11px;font-family:var(--mono);
+  color:var(--muted);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:3px 10px;
+  display:flex;align-items:center;gap:5px;
+}
+.chip svg{width:11px;height:11px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0}
+
+/* ── Analyze button ── */
+.analyze-btn{
+  width:100%;
+  padding:13px;
+  border:none;
+  border-radius:var(--r-md);
+  background:var(--accent);
+  color:#071a10;
+  font-family:var(--display);
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:opacity .2s,transform .1s;
+  letter-spacing:.3px;
+}
+.analyze-btn:hover:not(:disabled){opacity:.88}
+.analyze-btn:active:not(:disabled){transform:scale(.98)}
+.analyze-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed}
+.analyze-btn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none}
+.spinner{
+  width:16px;height:16px;
+  border:2px solid rgba(7,26,16,.3);
+  border-top-color:#071a10;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  display:none;
+}
+.loading .spinner{display:block}
+.loading .btn-icon{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Sidebar footer ── */
+.sidebar-footer{
+  margin-top:auto;
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.7;
+  padding-top:12px;
+  border-top:1px solid var(--border);
+}
+.sidebar-footer a{color:var(--accent);text-decoration:none}
+
+/* ── Main panel ── */
+.main{
+  padding:36px 40px;
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+.main-header{display:flex;align-items:center;justify-content:space-between}
+.main-title{
+  font-family:var(--display);
+  font-size:14px;font-weight:700;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.badge-device{
+  font-size:11px;font-family:var(--mono);
+  padding:3px 10px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:20px;
+  color:var(--muted);
+  display:flex;align-items:center;gap:5px;
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+/* ── Empty state ── */
+.empty-state{
+  flex:1;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:16px;text-align:center;
+  color:var(--muted);padding:60px 0;
+}
+.empty-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--surface2);
+  display:flex;align-items:center;justify-content:center;
+}
+.empty-icon svg{width:32px;height:32px;stroke:var(--muted);stroke-width:1.2;fill:none}
+.empty-state h2{font-family:var(--display);font-size:20px;font-weight:700;color:var(--text)}
+.empty-state p{font-size:14px;max-width:340px;line-height:1.6}
+
+/* ── Error box ── */
+.error-box{
+  background:var(--danger-dim);
+  border:1px solid rgba(224,92,92,.2);
+  border-radius:var(--r-md);
+  padding:14px 18px;
+  font-size:13px;color:var(--danger);
+  display:none;
+}
+.error-box.visible{display:block}
+
+/* ── Result area ── */
+.result-area{display:none;flex-direction:column;gap:20px}
+.result-area.visible{display:flex}
+
+/* ── Verdict card ── */
+.verdict-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:24px 28px;
+  display:flex;align-items:flex-start;gap:20px;
+}
+.verdict-icon{
+  width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.verdict-icon.real{background:var(--accent-dim)}
+.verdict-icon.fake{background:var(--danger-dim)}
+.verdict-icon svg{width:26px;height:26px;stroke-width:2;fill:none}
+.verdict-icon.real svg{stroke:var(--accent)}
+.verdict-icon.fake svg{stroke:var(--danger)}
+.verdict-body{flex:1}
+.verdict-label{
+  font-family:var(--display);
+  font-size:26px;font-weight:800;
+  letter-spacing:-.5px;line-height:1.1;margin-bottom:6px;
+}
+.verdict-label.real{color:var(--accent)}
+.verdict-label.fake{color:var(--danger)}
+.verdict-sub{font-size:13px;color:var(--muted)}
+.verdict-badge{
+  font-size:11px;font-family:var(--mono);
+  padding:4px 10px;border-radius:20px;border:1px solid;
+  margin-left:auto;flex-shrink:0;
+}
+.verdict-badge.real{color:var(--accent-txt);border-color:var(--accent-dim);background:var(--accent-dim)}
+.verdict-badge.fake{color:var(--danger-txt);border-color:var(--danger-dim);background:var(--danger-dim)}
+
+/* ── Warning box ── */
+.warning-box{
+  background:var(--warn-dim);
+  border:1px solid rgba(224,149,61,.2);
+  border-radius:var(--r-md);
+  padding:12px 16px;
+  font-size:12px;color:var(--warn);line-height:1.6;
+  display:none;gap:8px;align-items:flex-start;
+}
+.warning-box.visible{display:flex}
+.warning-box svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;flex-shrink:0;margin-top:2px}
+
+/* ── Probability bars ── */
+.prob-section{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:20px 24px;
+}
+.section-title{
+  font-size:11px;font-weight:500;
+  text-transform:uppercase;letter-spacing:.1em;
+  color:var(--muted);margin-bottom:16px;
+}
+.prob-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.prob-row:last-child{margin-bottom:0}
+.prob-name{font-size:13px;color:var(--text);width:100px;flex-shrink:0}
+.prob-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.prob-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.25,.1,.25,1)}
+.prob-fill.real{background:var(--accent)}
+.prob-fill.fake{background:var(--danger)}
+.prob-pct{font-size:13px;font-family:var(--mono);color:var(--text);width:44px;text-align:right;flex-shrink:0}
+
+/* ── Residual visualization (full width, no stats) ── */
+.images-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:20px 24px;
+}
+.img-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.img-box{border-radius:var(--r-md);overflow:hidden;background:var(--surface2)}
+.img-box img{width:100%;display:block}
+.img-tag{
+  font-size:10px;font-family:var(--mono);
+  color:var(--muted);text-align:center;
+  padding:5px;background:var(--surface2);
+}
+
+input[type=file]{display:none}
+
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:static;height:auto}
+  .main{padding:24px 20px}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" stroke="#071a10" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+          <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+          <line x1="7" y1="12" x2="17" y2="12"/>
+        </svg>
+      </div>
+      <div class="logo-text">PiD<span>·</span>AIGID</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="drop-zone" id="dropZone" onclick="handleDropClick()">
+      <div id="dropContent">
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <div class="drop-label">
+          <strong>Drop an image here</strong><br>
+          or click to browse<br>
+          <span style="font-size:11px">JPG · PNG · WEBP · BMP</span>
+        </div>
+      </div>
+      <div class="image-toolbar" id="imgToolbar">
+        <button class="tb-btn" onclick="clearImage(event)">
+          <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          Clear
+        </button>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" onchange="onFileSelect(event)">
+
+    <div class="chip-row" id="chipRow" style="display:none">
+      <div class="chip">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span id="chipName">—</span>
+      </div>
+      <div class="chip">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+        <span id="chipDims">—</span>
+      </div>
+      <div class="chip">
+        <svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        <span id="chipSize">—</span>
+      </div>
+    </div>
+
+    <button class="analyze-btn" id="analyzeBtn" disabled onclick="analyzeImage()">
+      <div class="spinner" id="spinner"></div>
+      <svg class="btn-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+      <span id="btnText">Select an image first</span>
+    </button>
+
+    <div class="sidebar-footer">
+      Implementation of <a href="https://arxiv.org/abs/2412.12980" target="_blank">PiD: Generalized AI-Generated Images Detection with Pixelwise Decomposition Residuals</a>.<br><br>
+      Backend: ResNet-50 trained on GenImage dataset.<br>
+      Residual = RGB→YUV→floor()→YUV⁻¹ quantization artifact.
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-title">Analysis Results</div>
+      <div class="badge-device" id="badgeDevice">
+        <div class="badge-dot"></div>
+        <span id="deviceLabel">Ready</span>
+      </div>
+    </div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <h2>No image analyzed yet</h2>
+      <p>Upload an image on the left and click <strong>Analyze</strong> to run PiD residual detection.</p>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="result-area" id="resultArea">
+
+      <!-- Verdict -->
+      <div class="verdict-card" id="verdictCard">
+        <div class="verdict-icon" id="verdictIcon">
+          <svg id="verdictSvg" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"></svg>
+        </div>
+        <div class="verdict-body">
+          <div class="verdict-label" id="verdictLabel">—</div>
+          <div class="verdict-sub" id="verdictSub">—</div>
+        </div>
+        <div class="verdict-badge" id="verdictBadge">—</div>
+      </div>
+
+      <!-- Warning -->
+      <div class="warning-box" id="warningBox">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="warningText"></span>
+      </div>
+
+      <!-- Probability bars -->
+      <div class="prob-section">
+        <div class="section-title">Confidence</div>
+        <div class="prob-row">
+          <div class="prob-name">Real photo</div>
+          <div class="prob-track"><div class="prob-fill real" id="barReal" style="width:0%"></div></div>
+          <div class="prob-pct" id="pctReal">0%</div>
+        </div>
+        <div class="prob-row">
+          <div class="prob-name">AI generated</div>
+          <div class="prob-track"><div class="prob-fill fake" id="barFake" style="width:0%"></div></div>
+          <div class="prob-pct" id="pctFake">0%</div>
+        </div>
+      </div>
+
+      <!-- Residual visualization only, full width, no stats -->
+      <div class="images-card">
+        <div class="section-title">PiD Residual Visualization</div>
+        <div class="img-grid">
+          <div class="img-box">
+            <img id="imgOriginal" src="" alt="Original 224x224">
+            <div class="img-tag">Original 224×224</div>
+          </div>
+          <div class="img-box">
+            <img id="imgResidual" src="" alt="YUV Residual amplified x8">
+            <div class="img-tag">YUV Residual ×8</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+let currentFile = null;
+
+const dropZone   = document.getElementById('dropZone');
+const fileInput  = document.getElementById('fileInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const btnText    = document.getElementById('btnText');
+const chipRow    = document.getElementById('chipRow');
+const emptyState = document.getElementById('emptyState');
+const resultArea = document.getElementById('resultArea');
+const errorBox   = document.getElementById('errorBox');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadFile(f);
+});
+
+function handleDropClick() { if (!currentFile) fileInput.click(); }
+function onFileSelect(e)   { if (e.target.files[0]) loadFile(e.target.files[0]); }
+
+function loadFile(file) {
+  currentFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      dropZone.classList.add('has-image');
+      document.getElementById('dropContent').innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
+      document.getElementById('chipName').textContent  = file.name.length > 22 ? file.name.slice(0,20)+'…' : file.name;
+      document.getElementById('chipDims').textContent  = img.naturalWidth + '×' + img.naturalHeight;
+      document.getElementById('chipSize').textContent  = (file.size/1024).toFixed(0) + ' KB';
+      chipRow.style.display = 'flex';
+      analyzeBtn.disabled   = false;
+      btnText.textContent   = 'Analyze image';
+      clearResults();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage(e) {
+  if (e) e.stopPropagation();
+  currentFile = null;
+  fileInput.value = '';
+  dropZone.classList.remove('has-image');
+  document.getElementById('dropContent').innerHTML = `
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+    </div>
+    <div class="drop-label">
+      <strong>Drop an image here</strong><br>or click to browse<br>
+      <span style="font-size:11px">JPG · PNG · WEBP · BMP</span>
+    </div>`;
+  chipRow.style.display = 'none';
+  analyzeBtn.disabled   = true;
+  btnText.textContent   = 'Select an image first';
+  clearResults();
+}
+
+function clearResults() {
+  resultArea.classList.remove('visible');
+  emptyState.style.display = 'flex';
+  errorBox.classList.remove('visible');
+  errorBox.textContent = '';
+}
+
+async function analyzeImage() {
+  if (!currentFile) return;
+  analyzeBtn.disabled = true;
+  analyzeBtn.classList.add('loading');
+  btnText.textContent = 'Analyzing…';
+  clearResults();
+  emptyState.style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('image', currentFile);
+
+  try {
+    const res  = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok || data.error) { showError(data.error || 'Server error.'); return; }
+    renderResult(data);
+  } catch (err) {
+    showError('Could not reach the server. Is Flask running?');
+  } finally {
+    analyzeBtn.classList.remove('loading');
+    analyzeBtn.disabled = false;
+    btnText.textContent = 'Re-analyze';
+  }
+}
+
+function showError(msg) {
+  errorBox.textContent = 'Error: ' + msg;
+  errorBox.classList.add('visible');
+  emptyState.style.display = 'none';
+}
+
+function renderResult(d) {
+  const isAI = d.is_ai;
+
+  const icon  = document.getElementById('verdictIcon');
+  const svg   = document.getElementById('verdictSvg');
+  const label = document.getElementById('verdictLabel');
+  const sub   = document.getElementById('verdictSub');
+  const badge = document.getElementById('verdictBadge');
+
+  icon.className  = 'verdict-icon ' + (isAI ? 'fake' : 'real');
+  label.className = 'verdict-label ' + (isAI ? 'fake' : 'real');
+  badge.className = 'verdict-badge ' + (isAI ? 'fake' : 'real');
+
+  if (isAI) {
+    svg.innerHTML = `<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>`;
+    label.textContent = 'AI Generated';
+    badge.textContent = 'FAKE';
+  } else {
+    svg.innerHTML = `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>`;
+    label.textContent = 'Real Photo';
+    badge.textContent = 'REAL';
+  }
+
+  sub.textContent = `${d.confidence.toFixed(1)}% confidence · Model prediction`;
+  document.getElementById('deviceLabel').textContent = d.image_info.device.toUpperCase();
+
+  setTimeout(() => {
+    document.getElementById('barReal').style.width = d.prob_real.toFixed(1) + '%';
+    document.getElementById('barFake').style.width = d.prob_fake.toFixed(1) + '%';
+    document.getElementById('pctReal').textContent = d.prob_real.toFixed(1) + '%';
+    document.getElementById('pctFake').textContent = d.prob_fake.toFixed(1) + '%';
+  }, 50);
+
+  document.getElementById('imgOriginal').src = 'data:image/png;base64,' + d.original_b64;
+  document.getElementById('imgResidual').src = 'data:image/png;base64,' + d.residual_b64;
+
+  const warnBox = document.getElementById('warningBox');
+  if (d.stats.mean < 0.003) {
+    document.getElementById('warningText').textContent =
+      'Very low residual variance detected. This image may have been post-processed, which can reduce detection accuracy.';
+    warnBox.classList.add('visible');
+  } else {
+    warnBox.classList.remove('visible');
+  }
+
+  resultArea.classList.add('visible');
+  emptyState.style.display = 'none';
+}
+</script>
+</body>
+</html>
