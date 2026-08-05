@@ -1,0 +1,12 @@
+streamlit
+torch
+torchvision
+opencv-python-headless
+numpy
+Pillow
+matplotlib
+datasets
+huggingface_hub
+pandas
+scikit-learn
+tqdm
